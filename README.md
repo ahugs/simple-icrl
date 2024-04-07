@@ -6,7 +6,7 @@ conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvi
 pip install -r requirements.txt
 ```
 ## To Run
-First, download the D4RL data locally.
+First, download the D4RL data locally (make sure to update `expert_data_path` in `config.yaml` if necessary).
 ```
 conda activate multi-irl
 export PYTHONPATH=${pwd}:$PYTHONPATH
