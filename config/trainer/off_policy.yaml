@@ -1,0 +1,7 @@
+_target_: tianshou.trainer.base.OffpolicyTrainer
+max_epoch: 600
+step_per_collect: 1
+step_per_epoch: 5000
+episode_per_test: 1
+batch_size: 100
+update_per_step: 1

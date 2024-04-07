@@ -1,0 +1,19 @@
+_target_: "src.rewards.reward_learner.RewardLearner"
+steps_per_epoch: 1
+batch_size: 5000
+regularization_coeff: 0
+learn_true_rewards: false
+net:
+  _target_: "src.utils.net.continuous.Reward"
+  preprocess_net:
+    _target_: "tianshou.utils.net.common.Net"
+    hidden_sizes: [64,64]
+    concat: True
+  output_activation: 
+    _target_: hydra.utils.get_class
+    path: torch.nn.Tanh
+  output_scaling: 10
+optim:
+  _target_: "torch.optim.Adam"
+  lr: 0.01
+  weight_decay: 1e-3

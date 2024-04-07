@@ -1,0 +1,10 @@
+_target_: tianshou.utils.logger.wandb.WandbLogger
+train_interval: 1000
+test_interval: 1
+update_interval: 1000
+info_interval: 1
+save_interval: 1000
+write_flush: True
+entity: real-lab
+name: ???
+project: ???

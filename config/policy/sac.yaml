@@ -1,0 +1,24 @@
+_target_: tianshou.policy.SACPolicy
+actor:
+  _target_: "tianshou.utils.net.continuous.ActorProb" 
+  preprocess_net:
+    _target_: "tianshou.utils.net.common.Net"
+    hidden_sizes: [256,256]
+  unbounded: True
+  conditioned_sigma: True
+critic:
+  _target_: "tianshou.utils.net.continuous.Critic"
+  preprocess_net:
+    _target_: "tianshou.utils.net.common.Net"
+    hidden_sizes: [256,256]
+    concat: True
+actor_optim:
+  _target_: "torch.optim.Adam"
+  lr: 0.001
+critic_optim:
+  _target_: "torch.optim.Adam"
+  lr: 0.001
+tau: 0.005
+gamma: 0.99
+alpha: 0.2
+estimation_step: 1

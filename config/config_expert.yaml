@@ -1,0 +1,17 @@
+defaults:
+  - policy: sac
+  - trainer: off_policy
+  - logger: wandb
+task: "HalfCheetah-v4"
+train_env_num: 1
+test_env_num: 1
+train_buffer_size: 1000000
+test_buffer_size: 10000
+warmstart_timesteps: 10000
+seed: 0
+logger:
+  name: Expert-${task}-${seed}
+  project: single-task-irl
+log_path: wandb/${now:%Y-%m-%d}_${now:%H-%M-%S}
+device: cuda
+  
