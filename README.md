@@ -10,5 +10,5 @@ First, download the D4RL data locally (make sure to update `expert_data_path` in
 ```
 conda activate multi-irl
 export PYTHONPATH=${pwd}:$PYTHONPATH
-python scripts/train_irl.p
+python scripts/train_irl.py
 ```

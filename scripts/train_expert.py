@@ -38,17 +38,6 @@ def train(conf: DictConfig) -> None:
     print("Actions shape:", action_shape)
     print("Action range:", min_action, max_action)
 
-    # train_envs = SubprocVectorEnv(
-    #     [lambda: gym.make(conf.task) for _ in range(conf.train_env_num)],
-    # )
-    # train_envs = VectorEnvNormObs(train_envs)
-
-    # test_envs = SubprocVectorEnv(
-    #     [lambda: gym.make(conf.task) for _ in range(conf.test_env_num)]
-    # )
-    # test_envs = VectorEnvNormObs(test_envs, update_obs_rms=False)
-    # test_envs.set_obs_rms(train_envs.get_obs_rms())
-
     # seed
     np.random.seed(conf.seed)
     torch.manual_seed(conf.seed)
