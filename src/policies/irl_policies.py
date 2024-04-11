@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from dataclasses import dataclass
 
 from tianshou.data import ReplayBuffer
@@ -44,9 +45,11 @@ class IRLBasePolicy(BasePolicy):
             [batch.obs, batch.act if concat else []],
             axis=1,
         )
-        batch.rew = (
-            self.reward_net(input).reshape(batch_size, -1).detach().cpu().numpy()
-        )
+
+        with torch.no_grad():
+            batch.rew = (
+                self.reward_net(input).reshape(batch_size, -1).detach().cpu().numpy()
+            )
 
         nstep_indices = [indices]
         for _ in range(self.estimation_step - 1):
@@ -59,9 +62,11 @@ class IRLBasePolicy(BasePolicy):
             ],
             axis=1,
         )
-        buffer.rew[nstep_indices] = (
-            self.reward_net(input).reshape(len(nstep_indices)).detach().cpu().numpy()
-        )
+
+        with torch.no_grad():
+            buffer.rew[nstep_indices] = (
+                self.reward_net(input).reshape(len(nstep_indices)).detach().cpu().numpy()
+            )
 
         batch = super().process_fn(batch, buffer, indices)
         return batch

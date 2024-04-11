@@ -1,0 +1,11 @@
+defaults:
+  - policy: sac
+  - trainer: off_policy
+  - logger: wandb
+task: "HalfCheetah-v4"
+policy_path: "data/HalfCheetah-v4.pth"
+buffer_size: 10000
+seed: 0
+log_path: wandb/${now:%Y-%m-%d}_${now:%H-%M-%S}
+device: cuda
+  

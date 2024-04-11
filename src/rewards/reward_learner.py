@@ -26,7 +26,7 @@ class RewardLearner:
     def update(self, learner_buffer):
         self.net.train()
 
-        for _ in (pbar := tqdm(range(self.steps_per_epoch))):
+        for _ in (pbar := tqdm(range(self.steps_per_epoch), desc='Reward Learning')):
 
             expert_batch, _ = self.expert_buffer.sample(self.batch_size)
             learner_batch, _ = learner_buffer.sample(self.batch_size)
@@ -57,11 +57,12 @@ class RewardLearner:
                     * (torch.sum(expert**2) + torch.sum(learner**2))
                     / num_data
                 )
-            pbar.set_description(f"Reward Loss {loss.item()}")
-
             self.optim.zero_grad()
             loss.backward()
             self.optim.step()
+
+            pbar.set_postfix({'loss': loss.item(), 'agent_rew': learner.mean().item(), 'expert_rew': expert.mean().item()})
+
 
         self.net.eval()
         return {'loss': loss.item(),

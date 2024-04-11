@@ -12,5 +12,5 @@ net:
   clip_range: [-10, 10]
 optim:
   _target_: "torch.optim.Adam"
-  lr: 0.1
-  weight_decay: 1e-3
+  lr: 0.02
+  weight_decay: 0.001
