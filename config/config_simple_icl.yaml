@@ -1,0 +1,19 @@
+defaults:
+  - policy: irl_sac
+  - reward: linear_mlp
+  - collector: fsrl
+  - trainer: safe_off_policy
+  - data: icrl
+  - logger: fsrl_wandb
+  - env: inverted_pendulum
+train_env_num: 1
+test_env_num: 1
+train_buffer_size: 1000000
+test_buffer_size: 10000
+warmstart_episodes: 1
+seed: 0
+logger:
+  name: ${task}-${seed}
+  project: simple-icl
+log_path: wandb/${now:%Y-%m-%d}_${now:%H-%M-%S}
+device: cuda

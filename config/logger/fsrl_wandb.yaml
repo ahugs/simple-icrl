@@ -1,0 +1,3 @@
+_target_: fsrl.utils.logger.WandbLogger
+name: ???
+project: ???

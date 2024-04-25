@@ -6,3 +6,4 @@ hydra-core>=1.3
 tianshou>=1.0.0
 wandb>=0.16.5
 xmltodict>=0.13.0
+mujoco<3
