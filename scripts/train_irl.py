@@ -11,6 +11,7 @@ from tianshou.data import ReplayBuffer, VectorReplayBuffer, Collector
 
 from src.wrappers.gym_wrappers import NoRewardEnv
 from mujoco_env import make_mujoco_env
+import envs
 
 
 @hydra.main(version_base=None, config_path="../config", config_name="config")
@@ -63,7 +64,6 @@ def train(conf: DictConfig) -> None:
         conf.policy.critic_optim, critic.parameters()
     )
 
-    # TODO: Clamp magnitude?
     reward_net = hydra.utils.instantiate(
         conf.reward.net,
         preprocess_net={
@@ -85,7 +85,7 @@ def train(conf: DictConfig) -> None:
     )
 
     reward_optim = hydra.utils.instantiate(conf.reward.optim, reward_net.parameters())
-    expert_buffer = hydra.utils.instantiate(conf.data).file_to_buffer(
+    expert_buffer = hydra.utils.instantiate(conf.data).load(
         conf.expert_data_path
     )
     irl = hydra.utils.instantiate(

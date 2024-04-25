@@ -8,5 +8,5 @@ class TianshouReader:
     def __init__(self):
         pass
 
-    def file_to_buffer(self, filename: str,) -> ReplayBuffer:
+    def load(self, filename: str,) -> ReplayBuffer:
         return ReplayBuffer.load_hdf5(filename)

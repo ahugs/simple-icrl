@@ -10,7 +10,7 @@ class D4RLReader:
     def __init__(self, num_episodes: int = None):
         self.num_episodes = num_episodes
 
-    def file_to_buffer(self, filename: str,) -> ReplayBuffer:
+    def load(self, filename: str,) -> ReplayBuffer:
         with h5py.File(filename, "r") as dataset:
             obs = dataset["observations"][:]
             act = dataset["actions"][:]
