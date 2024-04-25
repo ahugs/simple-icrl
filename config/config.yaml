@@ -1,6 +1,7 @@
 defaults:
   - policy: irl_sac
   - reward: linear_mlp
+  - collector: default
   - trainer: off_policy
   - data: d4rl
   - logger: wandb

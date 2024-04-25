@@ -1,6 +1,7 @@
 defaults:
   - policy: sac
   - trainer: off_policy
+  - collector: default
   - logger: wandb
 task: "HalfCheetah-v4"
 train_env_num: 1

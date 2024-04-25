@@ -1,6 +1,7 @@
 defaults:
   - policy: sac
   - trainer: off_policy
+  - collector: default
   - logger: wandb
 task: "HalfCheetah-v4"
 policy_path: "data/HalfCheetah-v4.pth"
