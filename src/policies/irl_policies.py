@@ -25,9 +25,10 @@ TIRLSACTrainingStats = TypeVar("TIRLSACTrainingStats", bound=IRLSACTrainingStats
 
 class IRLBasePolicy(BasePolicy):
 
-    def __init__(self, reward_net, *args, **kwargs):
+    def __init__(self, reward_net, *args,  additive_reward=False, **kwargs):
         super(IRLBasePolicy, self).__init__(*args, **kwargs)
         self.reward_net = reward_net
+        self.additive_reward = additive_reward
 
     def process_fn(
         self,
@@ -47,9 +48,12 @@ class IRLBasePolicy(BasePolicy):
         )
 
         with torch.no_grad():
+            orig_rew = batch.rew
             batch.rew = (
-                self.reward_net(input).reshape(batch_size, -1).detach().cpu().numpy()
+                self.reward_net(input).reshape(batch_size, -1).detach().cpu().numpy().squeeze()
             )
+            if self.additive_reward:
+                batch.rew += orig_rew
 
         nstep_indices = [indices]
         for _ in range(self.estimation_step - 1):
@@ -64,9 +68,12 @@ class IRLBasePolicy(BasePolicy):
         )
 
         with torch.no_grad():
+            orig_rew = buffer.rew[nstep_indices]
             buffer.rew[nstep_indices] = (
-                self.reward_net(input).reshape(len(nstep_indices)).detach().cpu().numpy()
+                self.reward_net(input).reshape(len(nstep_indices)).detach().cpu().numpy().squeeze()
             )
+            if self.additive_reward:
+                buffer.rew[nstep_indices] += orig_rew
 
         batch = super().process_fn(batch, buffer, indices)
         return batch
@@ -85,6 +92,12 @@ class IRLBasePolicy(BasePolicy):
 
     def update_reward_net(self, reward_net):
         self.reward_net = reward_net
+
+    def pre_update_fn(self, stats_train, batch_size, buffer, update_per_step):
+        return
+    
+    def post_update_fn(self, stats_train):
+        return
 
 
 class IRLSACPolicy(IRLBasePolicy, SACPolicy):
