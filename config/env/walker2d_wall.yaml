@@ -1,0 +1,27 @@
+# @package _global_
+
+task: "Walker2dWall-v0"
+expert_data_path: "data/icrl/walker"
+cost_fn: 
+  _target_: src.utils.cost_functions.wall_behind
+  pos: -3
+trainer:
+  update_per_step: 0.01
+  max_epoch: 100
+reward:
+  optim:
+    lr: 0.001
+  steps_per_epoch: 5
+policy:
+  actor:
+    preprocess_net:
+      hidden_sizes: [64,64]
+  critic:
+    preprocess_net:
+      hidden_sizes: [64,64]
+  actor_optim:
+    lr: 0.0001
+  critic_optim:
+    lr: 0.0001
+
+
