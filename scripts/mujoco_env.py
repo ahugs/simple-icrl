@@ -3,6 +3,8 @@
 
 import logging
 import pickle
+from typing import List, Callable 
+import gymnasium
 
 from gymnasium import Env
 
@@ -33,6 +35,7 @@ def make_mujoco_env(
     num_train_envs: int,
     num_test_envs: int,
     obs_norm: bool,
+    wrappers: List[Callable] = []
 ) -> tuple[Env, BaseVectorEnv, BaseVectorEnv]:
     """Wrapper function for Mujoco env.
 
@@ -40,7 +43,7 @@ def make_mujoco_env(
 
     :return: a tuple of (single env, training envs, test envs).
     """
-    envs = MujocoEnvFactory(task, seed, obs_norm=obs_norm).create_envs(
+    envs = MujocoEnvFactory(task, seed, obs_norm=obs_norm, wrappers=wrappers).create_envs(
         num_train_envs,
         num_test_envs,
     )
@@ -79,6 +82,7 @@ class MujocoEnvFactory(EnvFactoryRegistered):
         seed: int,
         obs_norm: bool = True,
         venv_type: VectorEnvType = VectorEnvType.SUBPROC_SHARED_MEM,
+        wrappers: List[Callable] = []
     ) -> None:
         super().__init__(
             task=task,
@@ -87,6 +91,7 @@ class MujocoEnvFactory(EnvFactoryRegistered):
             envpool_factory=EnvPoolFactory() if envpool_is_available else None,
         )
         self.obs_norm = obs_norm
+        self.wrappers = wrappers
 
     def create_venv(self, num_envs: int, mode: EnvMode) -> BaseVectorEnv:
         """Create vectorized environments.
@@ -100,7 +105,19 @@ class MujocoEnvFactory(EnvFactoryRegistered):
         if self.obs_norm:
             env = VectorEnvNormObs(env, update_obs_rms=mode == EnvMode.TRAIN)
         return env
+    
+    def create_env(self, mode: EnvMode) -> Env:
+        """Creates a single environment for the given mode.
 
+        :param mode: the mode
+        :return: an environment
+        """
+        kwargs = self._create_kwargs(mode)
+        env = gymnasium.make(self.task, **kwargs)
+        for wrapper in self.wrappers:
+            env = wrapper(env)
+        return env
+    
     def create_envs(
         self,
         num_training_envs: int,
