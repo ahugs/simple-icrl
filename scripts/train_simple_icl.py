@@ -11,7 +11,7 @@ from tianshou.data import ReplayBuffer, VectorReplayBuffer
 
 from src.wrappers.gym_wrappers import CostWrapper
 from mujoco_env import make_mujoco_env
-import envs
+import icrl
 
 
 @hydra.main(version_base=None, config_path="../config", config_name="config_simple_icl")
