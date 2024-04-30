@@ -1,4 +1,4 @@
-gymnasium[mujoco]>="0.28.0"
+gymnasium[mujoco]>="0.29.0"
 h5py >= "3.9.0"
 numba >= "0.57.1"
 numpy >= "1"
