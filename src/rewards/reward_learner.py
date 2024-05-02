@@ -14,6 +14,7 @@ class RewardLearner:
         batch_size=64,
         learn_true_rewards=False,
         regularization_coeff=1,
+        lr_scheduler=None
     ):
         self.net = net
         self.optim = optim
@@ -22,6 +23,7 @@ class RewardLearner:
         self.batch_size = batch_size
         self.regularization_coeff = regularization_coeff
         self.learn_true_rewards = learn_true_rewards
+        self.lr_scheduler = lr_scheduler
 
     def update(self, learner_buffer):
         self.net.train()
@@ -62,8 +64,9 @@ class RewardLearner:
             self.optim.step()
 
             pbar.set_postfix({'loss': loss.item(), 'agent_rew': learner.mean().item(), 'expert_rew': expert.mean().item()})
-
-
+        
+        if self.lr_scheduler is not None:
+            self.lr_scheduler.step()
         self.net.eval()
         return {'loss': loss.item(),
                 'learner_reward': learner.mean().item(),

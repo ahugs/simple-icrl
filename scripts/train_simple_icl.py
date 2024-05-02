@@ -93,9 +93,12 @@ def train(conf: DictConfig) -> None:
     )
 
     reward_optim = hydra.utils.instantiate(conf.reward.optim, reward_net.parameters())
+    reward_lr_scheduler = hydra.utils.instantiate(conf.reward.lr_scheduler, reward_optim)
+
     expert_buffer = hydra.utils.instantiate(conf.data).load(conf.expert_data_path)
     irl = hydra.utils.instantiate(
-        conf.reward, optim=reward_optim, net=reward_net, expert_buffer=expert_buffer
+        conf.reward, optim=reward_optim, net=reward_net, expert_buffer=expert_buffer,
+        lr_scheduler=reward_lr_scheduler
     )
     train_buffer: ReplayBuffer
     if conf.train_env_num > 1:
@@ -108,7 +111,7 @@ def train(conf: DictConfig) -> None:
 
     test_buffer: ReplayBuffer
     if conf.test_env_num > 1:
-        test_buffer = VectorReplayBuffer(conf.test_buffer_size, len(train_envs))
+        test_buffer = VectorReplayBuffer(conf.test_buffer_size, len(test_envs))
     else:
         test_buffer = ReplayBuffer(conf.test_buffer_size)
     test_collector = hydra.utils.instantiate(
@@ -127,7 +130,6 @@ def train(conf: DictConfig) -> None:
     for epoch_stat in trainer:
         trainer.policy.update_reward_net(irl.net)
         test_collector.policy.eval()
-        test_collector.collect(n_episode=5)
         stats = irl.update(test_collector.buffer)
         logger.store(tab="reward", **stats)
         logger.write(

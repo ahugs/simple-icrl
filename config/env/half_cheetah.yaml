@@ -1,10 +1,12 @@
 # @package _global_
 
-task: "AntWall-v0"
-expert_data_path: "data/icrl/ant"
+task: "HalfCheetah-v4"
+expert_data_path: "data/d4rl/halfcheetah_expert-v2.hdf5"
+data:
+  _target_: src.data.readers.D4RLReader
+  num_episodes: 50
 cost_fn: 
-  _target_: src.utils.cost_functions.wall_behind
-  pos: -3
+  _target_: src.utils.cost_functions.zero
 trainer:
   update_per_step: 1
   max_epoch: 1000
@@ -15,11 +17,8 @@ reward:
     lr: 0.0001
   net:
     preprocess_net:
-      hidden_sizes: [128,128]
+      hidden_sizes: [64, 64]
   steps_per_epoch: 1
-  lr_scheduler:
-    _target_: torch.optim.lr_scheduler.ExponentialLR
-    gamma: 0.99
 policy:
   actor:
     preprocess_net:
@@ -31,5 +30,3 @@ policy:
     lr: 0.001
   critic_optim:
     lr: 0.001
-
-

@@ -54,6 +54,7 @@ class IRLBasePolicy(BasePolicy):
             )
             if self.additive_reward:
                 batch.rew += orig_rew
+            batch.info.orig_rew = orig_rew
 
         nstep_indices = [indices]
         for _ in range(self.estimation_step - 1):
@@ -68,15 +69,29 @@ class IRLBasePolicy(BasePolicy):
         )
 
         with torch.no_grad():
-            orig_rew = buffer.rew[nstep_indices]
+            orig_rew = buffer.rew
             buffer.rew[nstep_indices] = (
                 self.reward_net(input).reshape(len(nstep_indices)).detach().cpu().numpy().squeeze()
             )
             if self.additive_reward:
-                buffer.rew[nstep_indices] += orig_rew
+                buffer.rew[nstep_indices] += orig_rew[nstep_indices]
+            buffer.info.orig_rew = orig_rew
 
         batch = super().process_fn(batch, buffer, indices)
         return batch
+
+    def post_process_fn(
+        self,
+        batch: RolloutBatchProtocol,
+        buffer: ReplayBuffer,
+        indices: np.ndarray,
+    ) -> RolloutBatchProtocol:
+        
+        batch.rew[:] = batch.info.orig_rew
+        buffer.rew[:] = buffer.info.orig_rew
+
+        return batch
+
 
     def learn(
         self, batch: RolloutBatchProtocol, *args: Any, **kwargs: Any

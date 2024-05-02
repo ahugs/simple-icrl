@@ -3,8 +3,6 @@
 import numpy as np
 from gymnasium.envs.mujoco.walker2d_v4 import Walker2dEnv
 
-REWARD_TYPE = 'old'  # Which reward to use, traditional or new one?
-
 
 # =========================================================================== #
 #                    Walker With Global Postion Coordinates                   #

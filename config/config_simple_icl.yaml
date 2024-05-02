@@ -7,7 +7,7 @@ defaults:
   - logger: fsrl_wandb
   - env: inverted_pendulum
 train_env_num: 1
-test_env_num: 1
+test_env_num: 5
 train_buffer_size: 1000000
 test_buffer_size: 10000
 warmstart_episodes: 1
