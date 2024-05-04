@@ -123,7 +123,7 @@ class DoubleCritic(DoubleCritic):
             device=self.device,
             linear_layer=self.linear_layer,
             flatten_input=self.flatten_input,
-        )
+        ).to(self.device)
         self.last2 = deepcopy(self.last1)
 
 
@@ -141,6 +141,7 @@ class ActorProb(ActorProb):
         preprocess_net_output_dim: int | None = None,
     ) -> None:
         self.hidden_sizes = hidden_sizes
+        self.conditioned_sigma = conditioned_sigma
         self.preprocess_net_output_dim = preprocess_net_output_dim
         super(ActorProb, self).__init__(preprocess_net,
                                            action_shape,
@@ -153,6 +154,15 @@ class ActorProb(ActorProb):
 
     def reinitialize_last_layer(self):
         input_dim = get_output_dim(self.preprocess, self.preprocess_net_output_dim)
-        self.mu = MLP(input_dim, self.output_dim, self.hidden_sizes, device=self.device)
+        self.mu = MLP(input_dim, self.output_dim, self.hidden_sizes, device=self.device).to(self.device)
+        if self.conditioned_sigma:
+            self.sigma = MLP(
+                input_dim,
+                self.output_dim,
+                self.hidden_sizes,
+                device=self.device,
+            ).to(self.device)
+        else:
+            self.sigma_param = nn.Parameter(torch.zeros(self.output_dim, 1)).to(self.device)
 
 
