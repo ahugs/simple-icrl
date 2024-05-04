@@ -17,3 +17,4 @@ optim:
   _target_: "torch.optim.Adam"
   lr: 0.01
   weight_decay: 0.001
+lr_scheduler: null

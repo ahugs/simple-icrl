@@ -16,7 +16,7 @@ class Walker2dWall(Walker2dEnv):
     def step(self, action):
         observation, reward, terminated, truncated, info = super().step(action)
 
-        rem_reward = reward = self._forward_reward_weight * info['x_velocity']
+        rem_reward = reward - self._forward_reward_weight * info['x_velocity']
         reward = rem_reward + self._forward_reward_weight * abs(info['x_velocity'])
 
         return observation, reward, terminated, truncated, info

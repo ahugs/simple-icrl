@@ -14,6 +14,7 @@ class RewardLearner:
         batch_size=64,
         learn_true_rewards=False,
         regularization_coeff=1,
+        is_constraint=False,
         lr_scheduler=None
     ):
         self.net = net
@@ -24,6 +25,7 @@ class RewardLearner:
         self.regularization_coeff = regularization_coeff
         self.learn_true_rewards = learn_true_rewards
         self.lr_scheduler = lr_scheduler
+        self.is_constraint = is_constraint
 
     def update(self, learner_buffer):
         self.net.train()
@@ -53,6 +55,8 @@ class RewardLearner:
                 loss += torch.nn.MSELoss()(expert, torch.FloatTensor(expert_batch.rew).to(expert.device))
             else:
                 loss = learner.mean() - expert.mean()
+                if self.is_constraint:
+                    loss = -loss
                 num_data = expert.shape[0] + learner.shape[0]
                 loss += (
                     self.regularization_coeff

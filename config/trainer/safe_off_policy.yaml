@@ -1,7 +1,7 @@
 _target_: fsrl.trainer.OffpolicyTrainer
-max_epoch: 500
-episode_per_collect: 2
-step_per_epoch: 200000
 episode_per_test: 5
 batch_size: 128
-update_per_step: 0.01
+update_per_step: 1
+max_epoch: 1000
+episode_per_collect: 1
+step_per_epoch: 5000

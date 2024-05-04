@@ -48,7 +48,7 @@ class IRLBasePolicy(BasePolicy):
         )
 
         with torch.no_grad():
-            orig_rew = batch.rew
+            orig_rew = batch.rew.copy()
             batch.rew = (
                 self.reward_net(input).reshape(batch_size, -1).detach().cpu().numpy().squeeze()
             )
@@ -69,7 +69,7 @@ class IRLBasePolicy(BasePolicy):
         )
 
         with torch.no_grad():
-            orig_rew = buffer.rew
+            orig_rew = buffer.rew.copy()
             buffer.rew[nstep_indices] = (
                 self.reward_net(input).reshape(len(nstep_indices)).detach().cpu().numpy().squeeze()
             )
@@ -87,8 +87,8 @@ class IRLBasePolicy(BasePolicy):
         indices: np.ndarray,
     ) -> RolloutBatchProtocol:
         
-        batch.rew[:] = batch.info.orig_rew
-        buffer.rew[:] = buffer.info.orig_rew
+        batch.rew[:] = batch.info.orig_rew.copy()
+        buffer.rew[:] = buffer.info.orig_rew.copy()
 
         return batch
 

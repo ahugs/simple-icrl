@@ -1,6 +1,7 @@
 from abc import ABC
 from collections.abc import Sequence
-from typing import Any, List
+from typing import Any, List, Union, Optional, Type
+from copy import deepcopy
 
 import numpy as np
 import torch
@@ -10,8 +11,11 @@ from tianshou.utils.net.common import (
     MLP,
     Net,
     TLinearLayer,
+    TActionShape,
     get_output_dim,
 )
+from tianshou.utils.net.continuous import ActorProb
+from fsrl.utils.net.continuous import DoubleCritic
 
 
 class Reward(nn.Module, ABC):
@@ -84,3 +88,71 @@ class Reward(nn.Module, ABC):
         values_B, hidden_BH = self.preprocess(obs)
         return torch.clamp(self.output_scaling * self.output_activation(self.last(values_B)), 
                            min=self.clip_range[0], max=self.clip_range[1])
+    
+
+class DoubleCritic(DoubleCritic):
+
+    def __init__(
+        self,
+        preprocess_net1: nn.Module,
+        preprocess_net2: nn.Module,
+        hidden_sizes: Sequence[int] = (),
+        device: Union[str, int, torch.device] = "cpu",
+        preprocess_net_output_dim: Optional[int] = None,
+        linear_layer: Type[nn.Linear] = nn.Linear,
+        flatten_input: bool = True,
+    ) -> None:
+        self.hidden_sizes = hidden_sizes
+        self.linear_layer = linear_layer
+        self.flatten_input = flatten_input
+        self.preprocess_net_output_dim = preprocess_net_output_dim
+        super(DoubleCritic, self).__init__(preprocess_net1,
+                                           preprocess_net2,
+                                           hidden_sizes,
+                                           device,
+                                           preprocess_net_output_dim,
+                                           linear_layer,
+                                           flatten_input)
+
+    def reinitialize_last_layer(self):
+        input_dim = getattr(self.preprocess1, "output_dim", self.preprocess_net_output_dim)
+        self.last1 = MLP(
+            input_dim,  # type: ignore
+            1,
+            self.hidden_sizes,
+            device=self.device,
+            linear_layer=self.linear_layer,
+            flatten_input=self.flatten_input,
+        )
+        self.last2 = deepcopy(self.last1)
+
+
+class ActorProb(ActorProb):
+
+    def __init__(
+        self,
+        preprocess_net: nn.Module,
+        action_shape: TActionShape,
+        hidden_sizes: Sequence[int] = (),
+        max_action: float = 1.0,
+        device: str | int | torch.device = "cpu",
+        unbounded: bool = False,
+        conditioned_sigma: bool = False,
+        preprocess_net_output_dim: int | None = None,
+    ) -> None:
+        self.hidden_sizes = hidden_sizes
+        self.preprocess_net_output_dim = preprocess_net_output_dim
+        super(ActorProb, self).__init__(preprocess_net,
+                                           action_shape,
+                                           hidden_sizes,
+                                           max_action,
+                                           device,
+                                           unbounded,
+                                           conditioned_sigma,
+                                           preprocess_net_output_dim)
+
+    def reinitialize_last_layer(self):
+        input_dim = get_output_dim(self.preprocess, self.preprocess_net_output_dim)
+        self.mu = MLP(input_dim, self.output_dim, self.hidden_sizes, device=self.device)
+
+

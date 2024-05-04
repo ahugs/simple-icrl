@@ -7,11 +7,6 @@ data:
   num_episodes: 50
 cost_fn: 
   _target_: src.utils.cost_functions.zero
-trainer:
-  update_per_step: 1
-  max_epoch: 1000
-  episode_per_collect: 1
-  step_per_epoch: 5000
 reward:
   optim:
     lr: 0.0001
@@ -19,14 +14,4 @@ reward:
     preprocess_net:
       hidden_sizes: [64, 64]
   steps_per_epoch: 1
-policy:
-  actor:
-    preprocess_net:
-      hidden_sizes: [256, 256]
-  critic:
-    preprocess_net:
-      hidden_sizes: [256, 256]
-  actor_optim:
-    lr: 0.001
-  critic_optim:
-    lr: 0.001
+

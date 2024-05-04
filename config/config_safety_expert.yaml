@@ -1,13 +1,15 @@
 defaults:
   - policy: sac_lag
-  - trainer: off_policy
-  - logger: wandb
-task: "HalfCheetah-v4"
+  - collector: fsrl
+  - trainer: safe_off_policy
+  - data: icrl
+  - logger: fsrl_wandb
+  - env: inverted_pendulum
 train_env_num: 1
-test_env_num: 1
+test_env_num: 5
 train_buffer_size: 1000000
 test_buffer_size: 10000
-warmstart_timesteps: 10000
+warmstart_episodes: 10
 cost_limit: 0.1
 seed: 0
 logger:

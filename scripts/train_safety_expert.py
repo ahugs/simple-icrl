@@ -95,7 +95,7 @@ def train(conf: DictConfig) -> None:
 
     test_buffer: ReplayBuffer
     if conf.test_env_num > 1:
-        test_buffer = VectorReplayBuffer(conf.test_buffer_size, len(train_envs))
+        test_buffer = VectorReplayBuffer(conf.test_buffer_size, len(test_envs))
     else:
         test_buffer = ReplayBuffer(conf.test_buffer_size)
     test_collector = Collector(policy, test_envs, test_buffer)

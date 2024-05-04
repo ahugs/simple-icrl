@@ -4,14 +4,13 @@ from dataclasses import dataclass
 
 from tianshou.data import ReplayBuffer
 from tianshou.data.types import RolloutBatchProtocol
-from tianshou.policy import BasePolicy, SACPolicy, PPOPolicy
-from tianshou.policy.modelfree.sac import SACTrainingStats
-from fsrl.policy import SACLagrangian, PPOLagrangian
-from typing import TypeVar, Any
+from tianshou.policy.modelfree.sac import SACTrainingStats, SACPolicy
+from fsrl.policy import SACLagrangian, PPOLagrangian, BasePolicy
+from typing import TypeVar, Any, List
 
 
 @dataclass(kw_only=True)
-class ICLSACTrainingStats(SACTrainingStats):
+class ICRLSACTrainingStats(SACTrainingStats):
     actor_loss: float
     critic1_loss: float
     critic2_loss: float
@@ -20,14 +19,17 @@ class ICLSACTrainingStats(SACTrainingStats):
     average_costs: float | None = None
 
 
-TICLSACTrainingStats = TypeVar("TICLSACTrainingStats", bound=ICLSACTrainingStats)
+TICRLSACTrainingStats = TypeVar("TICRLSACTrainingStats", bound=ICRLSACTrainingStats)
 
 
-class ICLBasePolicy(BasePolicy):
+class ICRLBasePolicy(BasePolicy):
 
-    def __init__(self, reward_net, *args, **kwargs):
-        super(ICLBasePolicy, self).__init__(*args, **kwargs)
-        self.constraint_net = reward_net
+    def __init__(self, constraint_net, lagrangian, *args, **kwargs):
+        critics = kwargs.pop("critics")
+        critics = list(critics)
+        super(ICRLBasePolicy, self).__init__(*args, critics=critics, **kwargs)
+        self.constraint_net = constraint_net
+        self.lagrangian = lagrangian
 
     def process_fn(
         self,
@@ -35,9 +37,9 @@ class ICLBasePolicy(BasePolicy):
         buffer: ReplayBuffer,
         indices: np.ndarray,
     ) -> RolloutBatchProtocol:
-        # Add new reward to the batch
+        # Add new constraint to the batch
         batch_size = batch.obs_next.shape[0]
-        input_size = next(self.reward_net.parameters()).size()
+        input_size = next(self.constraint_net.parameters()).size()
         concat = False
         if batch.obs.shape[-1] < input_size[-1]:
             concat = True
@@ -47,12 +49,14 @@ class ICLBasePolicy(BasePolicy):
         )
 
         with torch.no_grad():
-            batch.cost = (
-                self.constraint_net(input).reshape(batch_size, -1).detach().cpu().numpy()
+            batch.info.cost = batch.info.cost.astype(np.float32)
+            batch.info.orig_cost = batch.info.cost.copy()
+            batch.info.cost = (
+                self.constraint_net(input).reshape(batch_size, -1).detach().cpu().numpy().squeeze()
             )
 
         nstep_indices = [indices]
-        for _ in range(self.estimation_step - 1):
+        for _ in range(self._n_step - 1):
             nstep_indices.append(buffer.next(nstep_indices[-1]))
         nstep_indices = np.unique(np.stack(nstep_indices).flatten())
         input = np.concatenate(
@@ -64,34 +68,48 @@ class ICLBasePolicy(BasePolicy):
         )
 
         with torch.no_grad():
-            buffer.cost[nstep_indices] = (
-                self.constraint_net(input).reshape(len(nstep_indices)).detach().cpu().numpy()
+            buffer.info.cost = buffer.info.cost.astype(np.float32)
+            buffer.info.orig_cost = buffer.info.cost.copy()
+            buffer.info.cost[nstep_indices] = (
+                self.constraint_net(input).reshape(len(nstep_indices)).detach().cpu().numpy().squeeze()
             )
 
         batch = super().process_fn(batch, buffer, indices)
         return batch
+    
+    def post_process_fn(
+        self,
+        batch: RolloutBatchProtocol,
+        buffer: ReplayBuffer,
+        indices: np.ndarray,
+    ) -> RolloutBatchProtocol:
+        
+        batch.info.cost[:] = batch.info.orig_cost
+        buffer.info.cost[:] = buffer.info.orig_cost
 
-    def learn(
-        self, batch: RolloutBatchProtocol, *args: Any, **kwargs: Any
-    ) -> TIRLSACTrainingStats:
-        average_costs = batch.cost.mean().item()
-        stats = super().learn(batch, *args, **kwargs)
-        return ICLSACTrainingStats(
-            **{
-                **stats._get_self_dict(),
-                "average_costss": average_costs,
-            }
-        )
+        return batch
+
+    def pre_update_fn(self, **kwarg: Any) -> Any:
+        if self.lagrangian:
+            for optim in self.lag_optims:
+                optim.lagrangian = self.lagrangian
+            return 
+        else:
+            return super().pre_update_fn(**kwarg)
 
     def update_constraint_net(self, constraint_net):
         self.constraint_net = constraint_net
 
+    def reinitialize_last_layers(self):
+        self.actor.reinitialize_last_layer()
+        for critic in self.critics[1:]:
+            critic.reinitialize_last_layer()
 
-class ICLSACPolicy(ICLBasePolicy, SACLagrangian):
+
+class ICRLSACPolicy(ICRLBasePolicy, SACLagrangian):
     def __init__(self, *args, **kwargs):
-        super(ICLSACPolicy, self).__init__(*args, **kwargs)
+        super(ICRLSACPolicy, self).__init__(*args, **kwargs)
 
-
-class ICLPPOPolicy(ICLBasePolicy, PPOLagrangian):
+class ICRLPPOPolicy(ICRLBasePolicy, PPOLagrangian):
     def __init__(self, *args, **kwargs):
-        super(ICLPPOPolicy, self).__init__(*args, **kwargs)
+        super(ICRLPPOPolicy, self).__init__(*args, **kwargs)

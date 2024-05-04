@@ -1,5 +1,5 @@
 defaults:
-  - policy: irl_sac
+  - policy: irl_sac_lag
   - reward: linear_mlp
   - collector: fsrl
   - trainer: safe_off_policy
@@ -17,4 +17,6 @@ logger:
   project: simple-icl
 log_path: wandb/${now:%Y-%m-%d}_${now:%H-%M-%S}
 device: cuda
-reset_last_layer: False
+reward:
+  is_constraint: True
+reset_policy: False
