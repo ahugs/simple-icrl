@@ -17,4 +17,9 @@ logger:
   project: simple-icl
 log_path: wandb/${now:%Y-%m-%d}_${now:%H-%M-%S}
 device: cuda
-reset_last_layer: False
+reward:
+  net:
+    clip_range: [-20, 0]
+reset_policy: False
+normalize_reward: False
+normalize_obs: False

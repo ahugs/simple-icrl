@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from tianshou.data import ReplayBuffer
 from tianshou.data.types import RolloutBatchProtocol
 from tianshou.policy.modelfree.sac import SACTrainingStats, SACPolicy
+from tianshou.utils import RunningMeanStd
 from fsrl.policy import SACLagrangian, PPOLagrangian, BasePolicy
 from typing import TypeVar, Any, List
 
@@ -24,12 +25,22 @@ TICRLSACTrainingStats = TypeVar("TICRLSACTrainingStats", bound=ICRLSACTrainingSt
 
 class ICRLBasePolicy(BasePolicy):
 
-    def __init__(self, constraint_net, lagrangian, *args, **kwargs):
+    def __init__(self, constraint_net, lagrangian, *args, normalize_reward=False, **kwargs):
         critics = kwargs.pop("critics")
         critics = list(critics)
-        super(ICRLBasePolicy, self).__init__(*args, critics=critics, **kwargs)
+        alpha = kwargs.pop("alpha")
+        try:
+            len(alpha)
+            alpha = tuple(alpha)
+        except:
+            pass
+        super(ICRLBasePolicy, self).__init__(*args, critics=critics, alpha=alpha, **kwargs)
         self.constraint_net = constraint_net
         self.lagrangian = lagrangian
+        if normalize_reward:
+            self.rms = RunningMeanStd()
+        else:
+            self.rms = None
 
     def process_fn(
         self,
@@ -51,6 +62,10 @@ class ICRLBasePolicy(BasePolicy):
         with torch.no_grad():
             batch.info.cost = batch.info.cost.astype(np.float32)
             batch.info.orig_cost = batch.info.cost.copy()
+            if self.rms is not None:
+                batch.info.orig_rew = batch.rew.copy()
+                self.rms.update(batch.rew)
+                batch.rew = self.rms.norm(batch.rew)
             batch.info.cost = (
                 self.constraint_net(input).reshape(batch_size, -1).detach().cpu().numpy().squeeze()
             )
@@ -70,6 +85,9 @@ class ICRLBasePolicy(BasePolicy):
         with torch.no_grad():
             buffer.info.cost = buffer.info.cost.astype(np.float32)
             buffer.info.orig_cost = buffer.info.cost.copy()
+            if self.rms is not None:
+                buffer.info.orig_rew = buffer.rew.copy()
+                buffer.rew[nstep_indices] = self.rms.norm(buffer.rew[nstep_indices])
             buffer.info.cost[nstep_indices] = (
                 self.constraint_net(input).reshape(len(nstep_indices)).detach().cpu().numpy().squeeze()
             )
@@ -86,11 +104,14 @@ class ICRLBasePolicy(BasePolicy):
         
         batch.info.cost[:] = batch.info.orig_cost
         buffer.info.cost[:] = buffer.info.orig_cost
+        if self.rms is not None:
+            batch.rew[:] = batch.info.orig_rew
+            buffer.rew[:] = buffer.info.orig_rew
 
         return batch
 
     def pre_update_fn(self, **kwarg: Any) -> Any:
-        if self.lagrangian:
+        if self.lagrangian is not None:
             for optim in self.lag_optims:
                 optim.lagrangian = self.lagrangian
             return 

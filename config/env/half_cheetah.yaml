@@ -1,10 +1,9 @@
 # @package _global_
 
 task: "HalfCheetah-v4"
-expert_data_path: "data/d4rl/halfcheetah_expert-v2.hdf5"
+expert_data_path: Null
 data:
-  _target_: src.data.readers.D4RLReader
-  num_episodes: 50
+  _target_: src.data.readers.DummyReader
 cost_fn: 
   _target_: src.utils.cost_functions.zero
 reward:
@@ -14,4 +13,3 @@ reward:
     preprocess_net:
       hidden_sizes: [64, 64]
   steps_per_epoch: 1
-

@@ -7,8 +7,14 @@ cost_fn:
   pos: -3
 reward:
   optim:
-    lr: 0.0001
+    lr: 0.001
   net:
     preprocess_net:
       hidden_sizes: [64, 64]
+      norm_layer:
+        _target_: hydra.utils.get_class
+        path: torch.nn.BatchNorm1d
   steps_per_epoch: 1
+  lr_scheduler:
+    _target_: torch.optim.lr_scheduler.ExponentialLR
+    gamma: 0.99

@@ -29,7 +29,8 @@ def train(conf: DictConfig) -> None:
         conf.seed,
         conf.train_env_num,
         conf.test_env_num,
-        obs_norm=False,
+        obs_norm=conf.normalize_obs,
+        rew_norm=False,
         wrappers=[cost_wrapper],
     )
 
@@ -93,8 +94,19 @@ def train(conf: DictConfig) -> None:
         device=conf.device,
     ).to(conf.device)
 
-    # TODO: Add automatic alpha tuning
+
+
     policy = conf.policy.copy()
+
+    if not np.isscalar(conf.policy.alpha):
+        target_entropy = -np.prod(env.action_space.shape)
+        log_alpha = torch.zeros(1, requires_grad=True, device=conf.device)
+        alpha_optim = hydra.utils.instantiate(conf.policy.alpha.optim, [log_alpha])
+        alpha = (target_entropy, log_alpha, alpha_optim)
+        del policy.alpha
+    else:
+        alpha = conf.policy.alpha
+
     if 'critic' in conf.policy.keys():
         del policy.critic
     policy = hydra.utils.instantiate(
@@ -105,6 +117,7 @@ def train(conf: DictConfig) -> None:
         critics=critics,
         actor_optim=actor_optim,
         critic_optim=critic_optim,
+        alpha=alpha
     )
 
     constraint_optim = hydra.utils.instantiate(conf.reward.optim, constraint_net.parameters())
@@ -133,9 +146,6 @@ def train(conf: DictConfig) -> None:
     test_collector = hydra.utils.instantiate(
         conf.collector, policy=policy, env=test_envs, buffer=test_buffer
     )
-
-    def save_best_fn(policy) -> None:
-        torch.save(policy.state_dict(), conf.log_path + "/policy.pth")
 
     trainer = hydra.utils.instantiate(
         conf.trainer,

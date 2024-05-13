@@ -73,15 +73,27 @@ def train(conf: DictConfig) -> None:
         },
         device=conf.device,
     ).to(conf.device)
-    # TODO: Add automatic alpha tuning
+
+    policy = conf.policy.copy()
+
+    if not np.isscalar(conf.policy.alpha):
+        target_entropy = -np.prod(env.action_space.shape)
+        log_alpha = torch.zeros(1, requires_grad=True, device=conf.device)
+        alpha_optim = hydra.utils.instantiate(conf.policy.alpha.optim, [log_alpha])
+        alpha = (target_entropy, log_alpha, alpha_optim)
+        del policy.alpha
+    else:
+        alpha = conf.policy.alpha
+
     policy = hydra.utils.instantiate(
-        conf.policy,
+        policy,
         reward_net=reward_net,
         action_space=action_space,
         actor=actor,
         critic=critic,
         actor_optim=actor_optim,
         critic_optim=critic_optim,
+        alpha=alpha
     )
 
     reward_optim = hydra.utils.instantiate(conf.reward.optim, reward_net.parameters())

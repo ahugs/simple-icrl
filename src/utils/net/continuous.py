@@ -14,9 +14,14 @@ from tianshou.utils.net.common import (
     TActionShape,
     get_output_dim,
 )
-from tianshou.utils.net.continuous import ActorProb
+from tianshou.utils.net.continuous import ActorProb, Critic
 from fsrl.utils.net.continuous import DoubleCritic
 
+def reset_child_params(module):
+    for layer in module.children():
+        if hasattr(layer, "reset_parameters"):
+            layer.reset_parameters()
+        reset_child_params(layer)
 
 class Reward(nn.Module, ABC):
     """Simple reward network.
@@ -69,7 +74,6 @@ class Reward(nn.Module, ABC):
     def forward(
         self,
         obs: np.ndarray | torch.Tensor,
-        act: np.ndarray | torch.Tensor | None = None,
         info: dict[str, Any] | None = None,
     ) -> torch.Tensor:
         """Mapping: (s_B, a_B) -> Q(s, a)_B."""
@@ -78,91 +82,33 @@ class Reward(nn.Module, ABC):
             device=self.device,
             dtype=torch.float32,
         ).flatten(1)
-        if act is not None:
-            act = torch.as_tensor(
-                act,
-                device=self.device,
-                dtype=torch.float32,
-            ).flatten(1)
-            obs = torch.cat([obs, act], dim=1)
         values_B, hidden_BH = self.preprocess(obs)
+
         return torch.clamp(self.output_scaling * self.output_activation(self.last(values_B)), 
                            min=self.clip_range[0], max=self.clip_range[1])
     
 
 class DoubleCritic(DoubleCritic):
 
-    def __init__(
-        self,
-        preprocess_net1: nn.Module,
-        preprocess_net2: nn.Module,
-        hidden_sizes: Sequence[int] = (),
-        device: Union[str, int, torch.device] = "cpu",
-        preprocess_net_output_dim: Optional[int] = None,
-        linear_layer: Type[nn.Linear] = nn.Linear,
-        flatten_input: bool = True,
-    ) -> None:
-        self.hidden_sizes = hidden_sizes
-        self.linear_layer = linear_layer
-        self.flatten_input = flatten_input
-        self.preprocess_net_output_dim = preprocess_net_output_dim
-        super(DoubleCritic, self).__init__(preprocess_net1,
-                                           preprocess_net2,
-                                           hidden_sizes,
-                                           device,
-                                           preprocess_net_output_dim,
-                                           linear_layer,
-                                           flatten_input)
-
     def reinitialize_last_layer(self):
-        input_dim = getattr(self.preprocess1, "output_dim", self.preprocess_net_output_dim)
-        self.last1 = MLP(
-            input_dim,  # type: ignore
-            1,
-            self.hidden_sizes,
-            device=self.device,
-            linear_layer=self.linear_layer,
-            flatten_input=self.flatten_input,
-        ).to(self.device)
-        self.last2 = deepcopy(self.last1)
+        reset_child_params(self.last1)
+        reset_child_params(self.last2)
 
 
 class ActorProb(ActorProb):
 
-    def __init__(
-        self,
-        preprocess_net: nn.Module,
-        action_shape: TActionShape,
-        hidden_sizes: Sequence[int] = (),
-        max_action: float = 1.0,
-        device: str | int | torch.device = "cpu",
-        unbounded: bool = False,
-        conditioned_sigma: bool = False,
-        preprocess_net_output_dim: int | None = None,
-    ) -> None:
-        self.hidden_sizes = hidden_sizes
-        self.conditioned_sigma = conditioned_sigma
-        self.preprocess_net_output_dim = preprocess_net_output_dim
-        super(ActorProb, self).__init__(preprocess_net,
-                                           action_shape,
-                                           hidden_sizes,
-                                           max_action,
-                                           device,
-                                           unbounded,
-                                           conditioned_sigma,
-                                           preprocess_net_output_dim)
+    def reinitialize_last_layer(self):
+        reset_child_params(self.mu)
+        try:
+            reset_child_params(self.sigma)
+        except:
+            reset_child_params(self.sigma_param)
+
+
+class Critic(Critic):
 
     def reinitialize_last_layer(self):
-        input_dim = get_output_dim(self.preprocess, self.preprocess_net_output_dim)
-        self.mu = MLP(input_dim, self.output_dim, self.hidden_sizes, device=self.device).to(self.device)
-        if self.conditioned_sigma:
-            self.sigma = MLP(
-                input_dim,
-                self.output_dim,
-                self.hidden_sizes,
-                device=self.device,
-            ).to(self.device)
-        else:
-            self.sigma_param = nn.Parameter(torch.zeros(self.output_dim, 1)).to(self.device)
+        reset_child_params(self.last)
+
 
 

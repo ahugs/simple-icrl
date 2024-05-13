@@ -6,6 +6,7 @@ from tianshou.data import ReplayBuffer
 from tianshou.data.types import RolloutBatchProtocol
 from tianshou.policy import BasePolicy, SACPolicy, PPOPolicy
 from tianshou.policy.modelfree.sac import SACTrainingStats
+from tianshou.utils import RunningMeanStd
 
 from typing import TypeVar, Any
 
@@ -25,10 +26,15 @@ TIRLSACTrainingStats = TypeVar("TIRLSACTrainingStats", bound=IRLSACTrainingStats
 
 class IRLBasePolicy(BasePolicy):
 
-    def __init__(self, reward_net, *args,  additive_reward=False, **kwargs):
+    def __init__(self, reward_net, *args,  additive_reward=False, lagrangian=1., normalize_reward=False, **kwargs):
         super(IRLBasePolicy, self).__init__(*args, **kwargs)
         self.reward_net = reward_net
         self.additive_reward = additive_reward
+        self.lagrangian = lagrangian
+        if normalize_reward:
+            self.rms = RunningMeanStd()
+        else:
+            self.rms = None
 
     def process_fn(
         self,
@@ -49,12 +55,16 @@ class IRLBasePolicy(BasePolicy):
 
         with torch.no_grad():
             orig_rew = batch.rew.copy()
+            batch.info.orig_rew = orig_rew
+
             batch.rew = (
                 self.reward_net(input).reshape(batch_size, -1).detach().cpu().numpy().squeeze()
             )
             if self.additive_reward:
-                batch.rew += orig_rew
-            batch.info.orig_rew = orig_rew
+                if self.rms is not None:
+                    self.rms.update(orig_rew)
+                    orig_rew = self.rms.norm(orig_rew)
+                batch.rew = orig_rew + self.lagrangian * batch.rew
 
         nstep_indices = [indices]
         for _ in range(self.estimation_step - 1):
@@ -74,7 +84,11 @@ class IRLBasePolicy(BasePolicy):
                 self.reward_net(input).reshape(len(nstep_indices)).detach().cpu().numpy().squeeze()
             )
             if self.additive_reward:
-                buffer.rew[nstep_indices] += orig_rew[nstep_indices]
+                if self.rms is not None:
+                    norm_orig_rew = self.rms.norm(orig_rew[nstep_indices])
+                else:
+                    norm_orig_rew = orig_rew[nstep_indices]
+                buffer.rew[nstep_indices] = norm_orig_rew + self.lagrangian * buffer.rew[nstep_indices]
             buffer.info.orig_rew = orig_rew
 
         batch = super().process_fn(batch, buffer, indices)
@@ -113,7 +127,10 @@ class IRLBasePolicy(BasePolicy):
     
     def post_update_fn(self, stats_train):
         return
-
+    
+    def reinitialize_last_layers(self):
+        self.actor.reinitialize_last_layer()
+        self.critic.reinitialize_last_layer()
 
 class IRLSACPolicy(IRLBasePolicy, SACPolicy):
     def __init__(self, *args, **kwargs):

@@ -19,6 +19,8 @@ from tianshou.highlevel.env import (
 from tianshou.highlevel.persistence import Persistence, PersistEvent, RestoreEvent
 from tianshou.highlevel.world import World
 
+from src.wrappers.venv_wrappers import VectorEnvNormRew
+
 envpool_is_available = True
 try:
     import envpool
@@ -35,6 +37,7 @@ def make_mujoco_env(
     num_train_envs: int,
     num_test_envs: int,
     obs_norm: bool,
+    rew_norm: bool,
     wrappers: List[Callable] = []
 ) -> tuple[Env, BaseVectorEnv, BaseVectorEnv]:
     """Wrapper function for Mujoco env.
@@ -43,7 +46,7 @@ def make_mujoco_env(
 
     :return: a tuple of (single env, training envs, test envs).
     """
-    envs = MujocoEnvFactory(task, seed, obs_norm=obs_norm, wrappers=wrappers).create_envs(
+    envs = MujocoEnvFactory(task, seed, obs_norm=obs_norm, rew_norm=rew_norm, wrappers=wrappers).create_envs(
         num_train_envs,
         num_test_envs,
     )
@@ -74,6 +77,30 @@ class MujocoEnvObsRmsPersistence(Persistence):
         if world.envs.watch_env is not None:
             world.envs.watch_env.set_obs_rms(obs_rms)
 
+class MujocoEnvRewRmsPersistence(Persistence):
+    FILENAME = "env_rew_rms.pkl"
+
+    def persist(self, event: PersistEvent, world: World) -> None:
+        if event != PersistEvent.PERSIST_POLICY:
+            return  # type: ignore[unreachable]  # since PersistEvent has only one member, mypy infers that line is unreachable
+        rew_rms = world.envs.train_envs.get_rew_rms()
+        path = world.persist_path(self.FILENAME)
+        log.info(f"Saving environment rew_rms value to {path}")
+        with open(path, "wb") as f:
+            pickle.dump(rew_rms, f)
+
+    def restore(self, event: RestoreEvent, world: World) -> None:
+        if event != RestoreEvent.RESTORE_POLICY:
+            return  # type: ignore[unreachable]
+        path = world.restore_path(self.FILENAME)
+        log.info(f"Restoring environment rew_rms value from {path}")
+        with open(path, "rb") as f:
+            rew_rms = pickle.load(f)
+        world.envs.train_envs.set_rew_rms(rew_rms)
+        world.envs.test_envs.set_rew_rms(rew_rms)
+        if world.envs.watch_env is not None:
+            world.envs.watch_env.set_rew_rms(rew_rms)
+
 
 class MujocoEnvFactory(EnvFactoryRegistered):
     def __init__(
@@ -81,6 +108,7 @@ class MujocoEnvFactory(EnvFactoryRegistered):
         task: str,
         seed: int,
         obs_norm: bool = True,
+        rew_norm: bool = False,
         venv_type: VectorEnvType = VectorEnvType.SUBPROC_SHARED_MEM,
         wrappers: List[Callable] = []
     ) -> None:
@@ -91,6 +119,7 @@ class MujocoEnvFactory(EnvFactoryRegistered):
             envpool_factory=EnvPoolFactory() if envpool_is_available else None,
         )
         self.obs_norm = obs_norm
+        self.rew_norm = rew_norm
         self.wrappers = wrappers
 
     def create_venv(self, num_envs: int, mode: EnvMode) -> BaseVectorEnv:
@@ -104,6 +133,9 @@ class MujocoEnvFactory(EnvFactoryRegistered):
         # obs norm wrapper
         if self.obs_norm:
             env = VectorEnvNormObs(env, update_obs_rms=mode == EnvMode.TRAIN)
+        
+        if self.rew_norm and mode == EnvMode.TRAIN:
+            env = VectorEnvNormRew(env, update_rew_rms=True)
         return env
     
     def create_env(self, mode: EnvMode) -> Env:
@@ -132,4 +164,9 @@ class MujocoEnvFactory(EnvFactoryRegistered):
             if envs.watch_env is not None:
                 envs.watch_env.set_obs_rms(envs.train_envs.get_obs_rms())
             envs.set_persistence(MujocoEnvObsRmsPersistence())
+        
+        # if self.rew_norm:
+        #     if envs.watch_env is not None:
+        #         envs.watch_env.set_rew_rms(envs.train_envs.get_rew_rms())
+        #     envs.set_persistence(MujocoEnvRewRmsPersistence())
         return envs

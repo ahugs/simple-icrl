@@ -1,13 +1,13 @@
 _target_: src.policies.IRLSACPolicy
 actor:
-  _target_: "tianshou.utils.net.continuous.ActorProb" 
+  _target_: "src.utils.net.continuous.ActorProb" 
   preprocess_net:
     _target_: "tianshou.utils.net.common.Net"
     hidden_sizes: [256, 256]
   unbounded: True
   conditioned_sigma: True
 critic:
-  _target_: "tianshou.utils.net.continuous.Critic"
+  _target_: "src.utils.net.continuous.Critic"
   preprocess_net:
     _target_: "tianshou.utils.net.common.Net"
     hidden_sizes: [256, 256]
@@ -23,3 +23,5 @@ gamma: 0.99
 alpha: 0.2
 estimation_step: 1
 additive_reward: False
+normalize_reward: False
+lagrangian: 1

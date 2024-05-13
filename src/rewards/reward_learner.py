@@ -2,6 +2,7 @@ import torch
 from tqdm import tqdm
 import numpy as np
 
+from tianshou.utils import RunningMeanStd
 
 class RewardLearner:
 
@@ -15,7 +16,7 @@ class RewardLearner:
         learn_true_rewards=False,
         regularization_coeff=1,
         is_constraint=False,
-        lr_scheduler=None
+        lr_scheduler=None,
     ):
         self.net = net
         self.optim = optim

@@ -31,7 +31,8 @@ def train(conf: DictConfig) -> None:
         conf.seed,
         conf.train_env_num,
         conf.test_env_num,
-        obs_norm=False,
+        obs_norm=conf.normalize_obs,
+        rew_norm=conf.normalize_reward,
         wrappers=[cost_wrapper],
     )
 
@@ -95,7 +96,13 @@ def train(conf: DictConfig) -> None:
     reward_optim = hydra.utils.instantiate(conf.reward.optim, reward_net.parameters())
     reward_lr_scheduler = hydra.utils.instantiate(conf.reward.lr_scheduler, reward_optim)
 
-    expert_buffer = hydra.utils.instantiate(conf.data).load(conf.expert_data_path)
+    if conf.expert_data_path is not None:
+        expert_buffer = hydra.utils.instantiate(conf.data).load(conf.expert_data_path)
+    else:
+        expert_buffer = hydra.utils.instantiate(conf.data, 
+                                                action_shape=action_shape, 
+                                                obs_shape=state_shape,
+                                                ).load()
     irl = hydra.utils.instantiate(
         conf.reward, optim=reward_optim, net=reward_net, expert_buffer=expert_buffer,
         lr_scheduler=reward_lr_scheduler
@@ -136,7 +143,8 @@ def train(conf: DictConfig) -> None:
             trainer.env_step,
         )
         test_collector.reset()
-
+        if conf.reset_policy:
+            trainer.policy.reinitialize_last_layers()
 
 if __name__ == "__main__":
     train()
