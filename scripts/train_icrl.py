@@ -137,7 +137,7 @@ def train(conf: DictConfig) -> None:
     else:
         train_buffer = ReplayBuffer(conf.train_buffer_size)
     train_collector = hydra.utils.instantiate(
-        conf.collector, policy=policy, env=train_envs, buffer=train_buffer
+        conf.train_collector, policy=policy, env=train_envs, buffer=train_buffer
     )
 
     test_buffer: ReplayBuffer
@@ -146,7 +146,7 @@ def train(conf: DictConfig) -> None:
     else:
         test_buffer = ReplayBuffer(conf.test_buffer_size)
     test_collector = hydra.utils.instantiate(
-        conf.collector, policy=policy, env=test_envs, buffer=test_buffer
+        conf.test_collector, policy=policy, env=test_envs, buffer=test_buffer
     )
 
     trainer = hydra.utils.instantiate(

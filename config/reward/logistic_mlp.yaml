@@ -12,9 +12,11 @@ net:
   output_activation: 
     _target_: hydra.utils.get_class
     path: torch.nn.Sigmoid
+  output_transform: null
 optim:
   _target_: "torch.optim.Adam"
   lr: 0.01
   weight_decay: 0.001
 lr_scheduler: null
 is_constraint: True
+loss_transform: null

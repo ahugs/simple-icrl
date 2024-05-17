@@ -1,6 +1,6 @@
 from abc import ABC
 from collections.abc import Sequence
-from typing import Any, List, Union, Optional, Type
+from typing import Any, List, Union, Optional, Type, Callable
 from copy import deepcopy
 
 import numpy as np
@@ -53,6 +53,7 @@ class Reward(nn.Module, ABC):
         output_scaling: float = 1.0,
         clip_range: List[float] = [-np.inf, np.inf],
         flatten_input: bool = True,
+        output_transform: Callable[[torch.Tensor], torch.Tensor] | None = None,
     ) -> None:
         super().__init__()
         self.device = device
@@ -68,7 +69,13 @@ class Reward(nn.Module, ABC):
             flatten_input=flatten_input,
         )
         self.output_activation = output_activation()
-        self.output_scaling = output_scaling
+        assert not (output_scaling != 1.0 and output_transform is not None)
+        if output_scaling != 1.0:
+            self.output_transform = lambda x: x * output_scaling
+        elif output_transform is not None:
+            self.output_transform = output_transform
+        else: 
+            self.output_transform = nn.Identity()
         self.clip_range = clip_range
 
     def forward(
@@ -83,9 +90,8 @@ class Reward(nn.Module, ABC):
             dtype=torch.float32,
         ).flatten(1)
         values_B, hidden_BH = self.preprocess(obs)
-
-        return torch.clamp(self.output_scaling * self.output_activation(self.last(values_B)), 
-                           min=self.clip_range[0], max=self.clip_range[1])
+        output = self.output_transform(self.output_activation(self.last(values_B)))
+        return torch.clamp(output, min=self.clip_range[0], max=self.clip_range[1])
     
 
 class DoubleCritic(DoubleCritic):

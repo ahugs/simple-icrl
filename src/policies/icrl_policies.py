@@ -7,7 +7,7 @@ from tianshou.data.types import RolloutBatchProtocol
 from tianshou.policy.modelfree.sac import SACTrainingStats, SACPolicy
 from tianshou.utils import RunningMeanStd
 from fsrl.policy import SACLagrangian, PPOLagrangian, BasePolicy
-from typing import TypeVar, Any, List
+from typing import TypeVar, Any, List, Dict
 
 
 @dataclass(kw_only=True)
@@ -110,13 +110,15 @@ class ICRLBasePolicy(BasePolicy):
 
         return batch
 
-    def pre_update_fn(self, **kwarg: Any) -> Any:
+    def pre_update_fn(self, stats_train: Dict, **kwarg: Any) -> None:
         if self.lagrangian is not None:
             for optim in self.lag_optims:
                 optim.lagrangian = self.lagrangian
             return 
         else:
-            return super().pre_update_fn(**kwarg)
+            cost_values = stats_train["learned_cost"]
+            self.update_lagrangian(cost_values)
+            return
 
     def update_constraint_net(self, constraint_net):
         self.constraint_net = constraint_net

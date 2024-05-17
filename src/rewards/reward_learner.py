@@ -17,6 +17,7 @@ class RewardLearner:
         regularization_coeff=1,
         is_constraint=False,
         lr_scheduler=None,
+        loss_transform=None,
     ):
         self.net = net
         self.optim = optim
@@ -27,6 +28,7 @@ class RewardLearner:
         self.learn_true_rewards = learn_true_rewards
         self.lr_scheduler = lr_scheduler
         self.is_constraint = is_constraint
+        self.loss_transform = loss_transform
 
     def update(self, learner_buffer):
         self.net.train()
@@ -55,15 +57,18 @@ class RewardLearner:
                 loss = torch.nn.MSELoss()(learner, torch.FloatTensor(learner_batch.rew).to(learner.device))
                 loss += torch.nn.MSELoss()(expert, torch.FloatTensor(expert_batch.rew).to(expert.device))
             else:
-                loss = learner.mean() - expert.mean()
+                if self.loss_transform is not None:
+                    loss_learner = self.loss_transform(learner)
+                    loss_expert = self.loss_transform(expert)
+                else:
+                    loss_learner = learner
+                    loss_expert = expert
+                loss = loss_learner.mean() - loss_expert.mean()
                 if self.is_constraint:
                     loss = -loss
                 num_data = expert.shape[0] + learner.shape[0]
-                loss += (
-                    self.regularization_coeff
-                    * (torch.sum(expert**2) + torch.sum(learner**2))
-                    / num_data
-                )
+                regularization = (torch.sum(expert**2) + torch.sum(learner**2))/ num_data
+                loss += self.regularization_coeff * regularization
             self.optim.zero_grad()
             loss.backward()
             self.optim.step()

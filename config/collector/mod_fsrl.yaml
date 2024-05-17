@@ -1,1 +1,2 @@
 _target_: src.data.collector.Collector
+calculate_learned_cost: False

@@ -1,7 +1,8 @@
 defaults:
   - policy: irl_sac_lag
   - reward: linear_mlp
-  - collector: mod_fsrl
+  - collector@train_collector: mod_fsrl
+  - collector@test_collector: mod_fsrl
   - trainer: mod_safe_off_policy
   - data: icrl
   - logger: fsrl_wandb

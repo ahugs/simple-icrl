@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional
 import gymnasium as gym
 import numpy as np
 import torch
+from torch import nn
 from tianshou.data import (
     Batch,
     to_numpy,
@@ -11,6 +12,10 @@ from tianshou.data import (
 from fsrl.data.fast_collector import FastCollector
 
 class Collector(FastCollector):
+
+    def __init__(self, *args, calculate_learned_cost: bool = False, **kwargs):
+        super(Collector, self).__init__(*args, **kwargs)
+        self.calculate_learned_cost = calculate_learned_cost
 
     def collect(
         self,
@@ -47,6 +52,10 @@ class Collector(FastCollector):
 
         step_count = 0
         total_cost = 0
+        if self.calculate_learned_cost:
+            total_learned_cost = 0
+        else:
+            total_learned_cost = None
         termination_count = 0
         truncation_count = 0
         episode_count = 0
@@ -131,9 +140,27 @@ class Collector(FastCollector):
                         env_id=ready_env_ids,
                     )
                 )
+            if self.calculate_learned_cost:
+                input_size = next(self.policy.constraint_net.parameters()).size()
+                concat = False
+                if obs_next.shape[-1] < input_size[-1]:
+                    concat = True
+                try:
+                    input = np.concatenate(
+                        [obs_next, act if concat else []],
+                        axis=1,
+                 )
+                except:
+                    input = np.concatenate(
+                        [obs_next, act_sample if concat else []],
+                        axis=1,
+                 )             
 
+                with torch.no_grad():
+                    learned_cost = self.policy.constraint_net(input).detach().cpu().numpy().squeeze()
+                    total_learned_cost += np.sum(learned_cost)
             cost = self.data.info.get("cost", np.zeros(rew.shape))
-            total_cost += np.sum(cost)
+            total_cost += np.sum(cost)    
             is_feasible = is_feasible & (cost == 0)
             feasible_rew[is_feasible] += rew[is_feasible]
             self.data.update(cost=cost)
@@ -217,7 +244,7 @@ class Collector(FastCollector):
 
         done_count = termination_count + truncation_count
 
-        return {
+        ret = {
             "n/ep": episode_count,
             "n/st": step_count,
             "rew": rew_mean,
@@ -229,3 +256,7 @@ class Collector(FastCollector):
             "truncated": truncation_count / done_count,
             "terminated": termination_count / done_count,
         }
+        if total_learned_cost is not None:
+            ret["total_learned_cost"] = total_learned_cost
+            ret["learned_cost"] = total_learned_cost / episode_count
+        return ret
