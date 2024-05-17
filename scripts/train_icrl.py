@@ -6,7 +6,7 @@ import gymnasium as gym
 
 from torch.utils.tensorboard import SummaryWriter
 from tianshou.utils.space_info import SpaceInfo
-from mujoco_env import make_mujoco_env
+from src.envs.mujoco_env import make_mujoco_env
 from tianshou.data import ReplayBuffer, VectorReplayBuffer, Collector
 import icrl
 
@@ -14,6 +14,8 @@ import icrl
 @hydra.main(version_base=None, config_path="../config", config_name="config_icrl")
 def train(conf: DictConfig) -> None:
 
+    import icrl 
+    
     logger = hydra.utils.instantiate(conf.logger, _partial_=True)
     logger = logger(
         config=OmegaConf.to_container(conf, resolve=True), log_dir=conf.log_path
