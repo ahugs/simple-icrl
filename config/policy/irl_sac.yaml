@@ -20,8 +20,12 @@ critic_optim:
   lr: 0.001
 tau: 0.005
 gamma: 0.99
-alpha: 0.2
+# alpha: 0.2
 estimation_step: 1
 additive_reward: False
 normalize_reward: False
 lagrangian: 1
+alpha:
+  optim:
+    _target_: "torch.optim.Adam"
+    lr: 0.0003

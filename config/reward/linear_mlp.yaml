@@ -11,9 +11,11 @@ net:
     hidden_sizes: [64,64]
     concat: True
   clip_range: [-20, 0]
+  output_transform: null
 optim:
   _target_: "torch.optim.Adam"
   lr: 0.02
   weight_decay: 0.001
 lr_scheduler: null
 is_constraint: false
+loss_transform: null

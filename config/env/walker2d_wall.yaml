@@ -1,7 +1,7 @@
 # @package _global_
 
 task: "Walker2dWall-v0"
-expert_data_path: "data/icrl/walker"
+expert_data_path: "data/icrl/walker2d"
 cost_fn: 
   _target_: src.utils.cost_functions.wall_behind
   pos: -3

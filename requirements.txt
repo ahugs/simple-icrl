@@ -7,3 +7,4 @@ tianshou>=1.0.0
 wandb>=0.16.5
 xmltodict>=0.13.0
 mujoco==2.3.3
+hydra-submitit-launcher>=1.2.0

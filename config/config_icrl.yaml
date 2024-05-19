@@ -7,6 +7,8 @@ defaults:
   - data: icrl
   - logger: fsrl_wandb
   - env: inverted_pendulum
+  - override hydra/launcher: submitit_local
+
 train_env_num: 1
 test_env_num: 5
 train_buffer_size: 1000000

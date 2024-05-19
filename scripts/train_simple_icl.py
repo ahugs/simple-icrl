@@ -10,12 +10,15 @@ from tianshou.env import SubprocVectorEnv, VectorEnvNormObs
 from tianshou.data import ReplayBuffer, VectorReplayBuffer
 
 from src.wrappers.gym_wrappers import CostWrapper
-from mujoco_env import make_mujoco_env
+from src.envs.mujoco_env import make_mujoco_env
 import icrl
 
 
 @hydra.main(version_base=None, config_path="../config", config_name="config_simple_icl")
 def train(conf: DictConfig) -> None:
+
+    import icrl
+
     logger = hydra.utils.instantiate(conf.logger, _partial_=True)
     logger = logger(
         config=OmegaConf.to_container(conf, resolve=True), log_dir=conf.log_path
@@ -82,15 +85,26 @@ def train(conf: DictConfig) -> None:
         device=conf.device,
     ).to(conf.device)
 
-    # TODO: Add automatic alpha tuning
+    policy = conf.policy.copy()
+
+    if not np.isscalar(conf.policy.alpha):
+        target_entropy = -np.prod(env.action_space.shape)
+        log_alpha = torch.zeros(1, requires_grad=True, device=conf.device)
+        alpha_optim = hydra.utils.instantiate(conf.policy.alpha.optim, [log_alpha])
+        alpha = (target_entropy, log_alpha, alpha_optim)
+        del policy.alpha
+    else:
+        alpha = conf.policy.alpha
+
     policy = hydra.utils.instantiate(
-        conf.policy,
+        policy,
         reward_net=reward_net,
         action_space=action_space,
         actor=actor,
         critic=critic,
         actor_optim=actor_optim,
         critic_optim=critic_optim,
+        alpha=alpha
     )
 
     reward_optim = hydra.utils.instantiate(conf.reward.optim, reward_net.parameters())

@@ -1,11 +1,13 @@
 defaults:
   - policy: irl_sac
   - reward: linear_mlp
-  - collector: fsrl
-  - trainer: safe_off_policy
+  - collector: mod_fsrl
+  - trainer: mod_safe_off_policy
   - data: icrl
   - logger: fsrl_wandb
   - env: inverted_pendulum
+  - override hydra/launcher: submitit_local
+
 train_env_num: 1
 test_env_num: 5
 train_buffer_size: 1000000
@@ -23,3 +25,5 @@ reward:
 reset_policy: False
 normalize_reward: False
 normalize_obs: False
+policy:
+  additive_reward: True
