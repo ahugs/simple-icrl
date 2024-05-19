@@ -119,7 +119,8 @@ def train(conf: DictConfig) -> None:
         critics=critics,
         actor_optim=actor_optim,
         critic_optim=critic_optim,
-        alpha=alpha
+        alpha=alpha,
+        _recursive_=False
     )
 
     constraint_optim = hydra.utils.instantiate(conf.reward.optim, constraint_net.parameters())

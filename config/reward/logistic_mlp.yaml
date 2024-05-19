@@ -2,6 +2,7 @@ _target_: "src.rewards.reward_learner.RewardLearner"
 steps_per_epoch: 1
 batch_size: 5000
 regularization_coeff: 0
+regularization_type: "l2"
 learn_true_rewards: false
 net:
   _target_: "src.utils.net.continuous.Reward"

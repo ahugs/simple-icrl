@@ -8,8 +8,9 @@ from tianshou.policy.modelfree.sac import SACTrainingStats, SACPolicy
 from tianshou.utils import RunningMeanStd
 from fsrl.policy import SACLagrangian, PPOLagrangian, BasePolicy
 from typing import TypeVar, Any, List, Dict
+import hydra
 
-
+from src.utils.optim import LagrangianOptimizer
 @dataclass(kw_only=True)
 class ICRLSACTrainingStats(SACTrainingStats):
     actor_loss: float
@@ -25,7 +26,7 @@ TICRLSACTrainingStats = TypeVar("TICRLSACTrainingStats", bound=ICRLSACTrainingSt
 
 class ICRLBasePolicy(BasePolicy):
 
-    def __init__(self, constraint_net, lagrangian, *args, normalize_reward=False, **kwargs):
+    def __init__(self, constraint_net, lagrangian, lagrangian_optim=None, *args, normalize_reward=False, **kwargs):
         critics = kwargs.pop("critics")
         critics = list(critics)
         alpha = kwargs.pop("alpha")
@@ -41,6 +42,14 @@ class ICRLBasePolicy(BasePolicy):
             self.rms = RunningMeanStd()
         else:
             self.rms = None
+
+        if self.use_lagrangian and lagrangian_optim is not None:
+            assert len(
+                self.cost_limit
+            ) == (self.critics_num - 1), "cost_limit must has equal len of critics_num"
+            self.lag_optims = [
+                hydra.utils.instantiate(lagrangian_optim) for _ in range(self.critics_num - 1)
+            ]
 
     def process_fn(
         self,

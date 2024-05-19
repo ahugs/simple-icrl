@@ -18,6 +18,7 @@ class RewardLearner:
         is_constraint=False,
         lr_scheduler=None,
         loss_transform=None,
+        regularization_type="l1"
     ):
         self.net = net
         self.optim = optim
@@ -29,6 +30,7 @@ class RewardLearner:
         self.lr_scheduler = lr_scheduler
         self.is_constraint = is_constraint
         self.loss_transform = loss_transform
+        self.regularization_type = regularization_type
 
     def update(self, learner_buffer):
         self.net.train()
@@ -67,7 +69,10 @@ class RewardLearner:
                 if self.is_constraint:
                     loss = -loss
                 num_data = expert.shape[0] + learner.shape[0]
-                regularization = (torch.sum(expert**2) + torch.sum(learner**2))/ num_data
+                if self.regularization_type == "l2":
+                    regularization = (torch.sum(expert**2) + torch.sum(learner**2))/ num_data
+                elif self.regularization_type == "l1":
+                    regularization = (torch.sum(torch.abs(expert)) + torch.sum(torch.abs(learner))) / num_data
                 loss += self.regularization_coeff * regularization
             self.optim.zero_grad()
             loss.backward()
