@@ -3,6 +3,7 @@ from tqdm import tqdm
 import numpy as np
 
 from tianshou.utils import RunningMeanStd
+from tianshou.data import ReplayBuffer, Batch
 
 class RewardLearner:
 
@@ -31,6 +32,7 @@ class RewardLearner:
         self.is_constraint = is_constraint
         self.loss_transform = loss_transform
         self.regularization_type = regularization_type
+        self.prior_buffer = ReplayBuffer(100000)
 
     def update(self, learner_buffer):
         self.net.train()
@@ -39,6 +41,18 @@ class RewardLearner:
 
             expert_batch, _ = self.expert_buffer.sample(self.batch_size)
             learner_batch, _ = learner_buffer.sample(self.batch_size)
+
+            for i in range(len(learner_batch)):
+                self.prior_buffer.add(
+                    Batch(
+                        obs=learner_batch.obs[i],
+                        act=learner_batch.act[i],
+                        rew=learner_batch.rew[i],
+                        terminated=learner_batch.terminated[i],
+                        truncated=learner_batch.truncated[i],
+                        obs_next=learner_batch.obs_next[i],
+                    )
+                )
 
             input_size = next(self.net.parameters()).size()
             concat = False
@@ -52,6 +66,14 @@ class RewardLearner:
                 [learner_batch.obs, learner_batch.act if concat else []],
                 axis=1,
             )
+            if self.regularization_type == "prior_learner":
+                prior_batch, _ = self.prior_buffer.sample(self.batch_size)
+                prior_input = np.concatenate(
+                    [prior_batch.obs, prior_batch.act if concat else []],
+                    axis=1,
+                )
+                prior_learner = self.net(prior_input)
+
             learner = self.net(learner_input)
             expert = self.net(expert_input)
 
@@ -73,7 +95,12 @@ class RewardLearner:
                     regularization = (torch.sum(expert**2) + torch.sum(learner**2))/ num_data
                 elif self.regularization_type == "l1":
                     regularization = (torch.sum(torch.abs(expert)) + torch.sum(torch.abs(learner))) / num_data
+                elif self.regularization_type == "prior_learner" and prior_batch is not None:
+                    regularization = prior_learner.mean()
+                else:
+                    regularization = 0
                 loss += self.regularization_coeff * regularization
+            
             self.optim.zero_grad()
             loss.backward()
             self.optim.step()
