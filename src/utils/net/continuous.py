@@ -76,7 +76,10 @@ class Reward(nn.Module, ABC):
             self.output_transform = output_transform
         else: 
             self.output_transform = nn.Identity()
-        self.clip_range = clip_range
+        if clip_range is None:
+            self.clip_range = [-np.inf, np.inf]
+        else:
+            self.clip_range = clip_range
 
     def forward(
         self,
