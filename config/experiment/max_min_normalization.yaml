@@ -1,0 +1,15 @@
+# @package _global_
+policy:
+  lagrangian: 1
+  normalize_reward:
+    _target_: "src.utils.statistics.RunningMaxMin"
+reset_policy: True
+reward:
+  lr_scheduler: null
+  regularization_coeff: 0.005
+  regularization_type: "l2"
+  optim:
+    lr: 0.0001
+  net:
+    preprocess_net:
+      norm_layer: null

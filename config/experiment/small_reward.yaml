@@ -1,0 +1,13 @@
+# @package _global_
+policy:
+  lagrangian: 1 
+  normalize_reward: False
+reward:
+  lr_scheduler: null
+  optim:
+    lr: 0.0001
+  net:
+    preprocess_net:
+      norm_layer: null
+      hidden_sizes: [32]
+reset_policy: True

@@ -1,0 +1,15 @@
+# @package _global_
+policy:
+  lagrangian: 1 
+  normalize_reward: False
+reset_policy: True
+reward:
+  lr_scheduler: null
+  net:
+    preprocess_net:
+      norm_layer:
+        _target_: hydra.utils.get_class
+        path: torch.nn.BatchNorm1d
+  steps_per_epoch: 1
+  regularization_coeff: 0
+  regularization_type: "l1"

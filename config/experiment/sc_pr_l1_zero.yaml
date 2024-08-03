@@ -1,0 +1,18 @@
+# @package _global_
+policy:
+  lagrangian: 1 
+  normalize_reward: False
+reset_policy: True
+reward:
+  lr_scheduler: null
+  net:
+    initialize_zero: True
+    clip_range: null
+    preprocess_net:
+      norm_layer: null
+    output_activation: 
+      _target_: hydra.utils.get_class
+      path: torch.nn.LeakyReLU
+  steps_per_epoch: 1
+  regularization_coeff: 1
+  regularization_type: "l1"

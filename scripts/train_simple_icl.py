@@ -1,6 +1,7 @@
 import hydra
 import numpy as np
 import torch
+import wandb
 from omegaconf import DictConfig, OmegaConf
 import gymnasium as gym
 
@@ -159,6 +160,25 @@ def train(conf: DictConfig) -> None:
         test_collector.reset()
         if conf.reset_policy:
             trainer.policy.reinitialize_last_layers()
+
+    stats_test = test_collector.collect(n_episode=conf.episode_final_test)
+
+    logger.store(
+        **{
+            "test/reward": stats_test["rew"],
+            "test/cost": stats_test["cost"],
+            "test/length": int(stats_test["len"]),
+            "test/feasible_reward": stats_test["feasible_rew"],
+            "test/violation_rate": stats_test["violation_rate"]
+        }
+    )
+    logger.write(
+        trainer.env_step + 1,
+    )
+    torch.save(policy.state_dict(), conf.policy_save_path)
+    artifact = wandb.Artifact('model', type='model')
+    artifact.add_file(conf.policy_save_path)
+    logger.wandb_run.log_artifact(artifact)
 
 if __name__ == "__main__":
     train()

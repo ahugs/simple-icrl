@@ -26,3 +26,5 @@ reward:
     clip_range: [0, 20]
 reset_policy: False
 normalize_obs: False
+policy_save_path: /scratch/models/multi-irl/wandb/${now:%Y-%m-%d}_${now:%H-%M-%S}.pth
+episode_final_test: 50

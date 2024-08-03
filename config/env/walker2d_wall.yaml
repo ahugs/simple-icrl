@@ -7,7 +7,7 @@ cost_fn:
   pos: -3
 reward:
   optim:
-    lr: 0.001
+    lr: 0.0001
   net:
     preprocess_net:
       hidden_sizes: [64, 64]

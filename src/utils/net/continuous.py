@@ -54,6 +54,7 @@ class Reward(nn.Module, ABC):
         clip_range: List[float] = [-np.inf, np.inf],
         flatten_input: bool = True,
         output_transform: Callable[[torch.Tensor], torch.Tensor] | None = None,
+        initialize_zero: bool = False,
     ) -> None:
         super().__init__()
         self.device = device
@@ -80,6 +81,10 @@ class Reward(nn.Module, ABC):
             self.clip_range = [-np.inf, np.inf]
         else:
             self.clip_range = clip_range
+
+        if initialize_zero:
+            self.last.model[0].weight.data.fill_(0)
+            self.last.model[0].bias.data.fill_(0)
 
     def forward(
         self,
