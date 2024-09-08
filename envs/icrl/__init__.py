@@ -43,7 +43,8 @@ register(
     reward_threshold=None,
     nondeterministic=False,
     kwargs={'exclude_current_positions_from_observation': False,
-            'use_contact_forces': True}
+            'use_contact_forces': True,
+            'terminate_when_unhealthy': False}
 )
 
 
