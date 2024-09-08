@@ -16,5 +16,5 @@ class AntWall(AntEnv):
 
     def step(self, action):
         observation, reward, terminated, truncated, info = super().step(action)
-        reward = info['distance_from_origin'] + info['reward_survive']
+        reward = reward - info['x_velocity'] + info['distance_from_origin']
         return observation, reward, terminated, truncated, info
