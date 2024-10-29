@@ -128,7 +128,7 @@ def train(conf: DictConfig) -> None:
     else:
         train_buffer = ReplayBuffer(conf.train_buffer_size)
     train_collector = hydra.utils.instantiate(
-        conf.collector, policy=policy, env=train_envs, buffer=train_buffer
+        conf.train_collector, policy=policy, env=train_envs, buffer=train_buffer
     )
 
     test_buffer: ReplayBuffer
@@ -137,7 +137,7 @@ def train(conf: DictConfig) -> None:
     else:
         test_buffer = ReplayBuffer(conf.test_buffer_size)
     test_collector = hydra.utils.instantiate(
-        conf.collector, policy=policy, env=test_envs, buffer=test_buffer
+        conf.test_collector, policy=policy, env=test_envs, buffer=test_buffer
     )
 
     trainer = hydra.utils.instantiate(
@@ -150,13 +150,20 @@ def train(conf: DictConfig) -> None:
 
     train_collector.collect(n_episode=conf.warmstart_episodes, random=True)
     for epoch_stat in trainer:
-        trainer.policy.update_reward_net(irl.net)
-        test_collector.policy.eval()
-        stats = irl.update(test_collector.buffer)
-        logger.store(tab="reward", **stats)
-        logger.write(
-            trainer.env_step,
-        )
+        update_reward = True
+        policy.lagrangian = conf.policy.lagrangian
+        if "reward_warmstart_epochs" in conf.keys():
+            if trainer.epoch < conf.reward_warmstart_epochs:
+                update_reward = False
+                policy.lagrangian = 0
+        if update_reward:
+            trainer.policy.update_reward_net(irl.net)
+            test_collector.policy.eval()
+            stats = irl.update(test_collector.buffer)
+            logger.store(tab="reward", **stats)
+            logger.write(
+                trainer.env_step,
+            )
         test_collector.reset()
         if conf.reset_policy:
             trainer.policy.reinitialize_last_layers()
@@ -165,11 +172,11 @@ def train(conf: DictConfig) -> None:
 
     logger.store(
         **{
-            "test/reward": stats_test["rew"],
-            "test/cost": stats_test["cost"],
-            "test/length": int(stats_test["len"]),
-            "test/feasible_reward": stats_test["feasible_rew"],
-            "test/violation_rate": stats_test["violation_rate"]
+            "final_test/reward": stats_test["rew"],
+            "final_test/cost": stats_test["cost"],
+            "final_test/length": int(stats_test["len"]),
+            "final_test/feasible_reward": stats_test["feasible_rew"],
+            "final_test/violation_rate": stats_test["violation_rate"]
         }
     )
     logger.write(

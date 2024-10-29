@@ -97,6 +97,8 @@ class RewardLearner:
                     regularization = (torch.sum(torch.abs(expert)) + torch.sum(torch.abs(learner))) / num_data
                 elif self.regularization_type == "prior_learner" and prior_batch is not None:
                     regularization = prior_learner.mean()
+                elif self.regularization_type == "l2_expert":
+                    regularization = torch.sum(expert**2)/expert.shape[0]
                 else:
                     regularization = 0
                 loss += self.regularization_coeff * regularization

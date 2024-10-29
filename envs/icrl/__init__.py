@@ -1,3 +1,4 @@
+import os
 from gymnasium.envs.registration import register
 
 
@@ -44,7 +45,8 @@ register(
     nondeterministic=False,
     kwargs={'exclude_current_positions_from_observation': False,
             'use_contact_forces': True,
-            'terminate_when_unhealthy': False}
+            'terminate_when_unhealthy': False,
+            'xml_file':f"{os.path.abspath(os.path.dirname(__file__))}/xml/ant_circle.xml"}
 )
 
 

@@ -159,18 +159,23 @@ def train(conf: DictConfig) -> None:
         logger=logger,
     )
 
+
     train_collector.collect(n_episode=conf.warmstart_episodes, random=True)
     for epoch_stat in trainer:
+        update_reward = True
+        policy.lagrangian = conf.policy.lagrangian
         if "reward_warmstart_epochs" in conf.keys():
             if trainer.epoch < conf.reward_warmstart_epochs:
-                continue
-        trainer.policy.update_constraint_net(irl.net)
-        test_collector.policy.eval()
-        stats = irl.update(test_collector.buffer)
-        logger.store(tab="reward", **stats)
-        logger.write(
-            trainer.env_step,
-        )
+                update_reward = False
+                policy.lagrangian = 0
+        if update_reward:
+            trainer.policy.update_constraint_net(irl.net)
+            test_collector.policy.eval()
+            stats = irl.update(test_collector.buffer)
+            logger.store(tab="reward", **stats)
+            logger.write(
+                trainer.env_step,
+            )
         test_collector.reset()
         if conf.reset_policy:
             trainer.policy.reinitialize_last_layers()
