@@ -3,7 +3,6 @@ policy:
   lagrangian: 1 
   normalize_reward: False
 reset_policy: True
-reward_warmstart_epochs: 200
 reward:
   lr_scheduler: null
   net:
@@ -15,5 +14,5 @@ reward:
       _target_: hydra.utils.get_class
       path: torch.nn.LeakyReLU
   steps_per_epoch: 1
-  regularization_coeff: 1
-  regularization_type: "l1"
+  regularization_coeff: 0.1
+  regularization_type: "l2_expert"

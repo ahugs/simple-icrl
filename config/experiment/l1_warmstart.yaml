@@ -2,7 +2,7 @@
 policy:
   lagrangian: 1 
   normalize_reward: False
-reset_policy: True
+reset_policy: False
 reward_warmstart_epochs: 200
 reward:
   lr_scheduler: null
